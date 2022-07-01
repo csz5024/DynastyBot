@@ -2,6 +2,7 @@
 
 Some notes:
 - refreshLeague is a mess but so is the ESPN website.
+- teamStats has alot of repeated flow, will cleanup soon
 
 '''
 
@@ -33,7 +34,9 @@ user_settings = openJSON('conf.json')
 
 WINDOW_SIZE = "1920,1080"
 PROFILE = user_settings['profile']
+BINARYLOC = user_settings['binary']
 USERMAP = user_settings['usermap']
+LEAGUEID = user_settings['leagueID']
 DISCORD_TOKEN = user_settings["DISCORD_TOKEN"]
 
 options = webdriver.ChromeOptions()
@@ -46,6 +49,7 @@ options.add_argument('--disable-dev-shm-usage')
 options.add_experimental_option("useAutomationExtension", False)
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_argument("user-data-dir=%s" % PROFILE)
+options.binary_location = BINARYLOC
 driver = webdriver.Chrome("chromedriver", chrome_options=options)
 
 
@@ -56,7 +60,7 @@ async def myroster(ctx):
 
     embed = discord.Embed(
         title=str(ctx.message.author) + '\'s Team:',
-        url='https://fantasy.espn.com/baseball/team?leagueId='+str(USERMAP['leagueID'])+'&teamId=' +
+        url='https://fantasy.espn.com/baseball/team?leagueId=' + str(LEAGUEID) + '&teamId=' +
             str(USERMAP[str(ctx.message.author)]),
         # description="blah",
         color=discord.Color.red()
@@ -105,13 +109,14 @@ async def myroster(ctx):
 
     await ctx.channel.send(embed=embed)
 
+
 @bot.command(name="top100", brief="Top 100 prospects list.")
 async def top(ctx, *args):
 
     top_list = openJSON('top100.json')
     #top_list = openJSON('2020top100.json')
 
-    level_ref = {'A-': 1.0, 'A': 1.0, 'A+':1.0, 'AA': 1.4, 'AAA': 1.5}
+    level_ref = {'A-': 1.0, 'A': 1.0, 'A+': 1.0, 'AA': 1.4, 'AAA': 1.5}
 
     url = 'https://blogs.fangraphs.com/2022-top-100-prospects/'
     #url = 'https://blogs.fangraphs.com/2020-top-100-prospects/'
@@ -130,11 +135,11 @@ async def top(ctx, *args):
         if len(columns) <= 0:
             print('divider')
             continue
-        #print(columns[1].get_attribute('innerHTML'))
+        # print(columns[1].get_attribute('innerHTML'))
         rank = columns[0].text
         try:
             link = columns[1].find_element(By.TAG_NAME, 'a')
-        except:
+        except BaseException:
             continue
         name = link.text
         link = link.get_attribute('href')
@@ -156,9 +161,10 @@ async def top(ctx, *args):
                     driver, 10).until(
                     EC.presence_of_element_located(
                         (By.CLASS_NAME, 'player-page-prospects-main')))
-                scouting_report = scouting_report.find_elements(By.TAG_NAME, 'td')
+                scouting_report = scouting_report.find_elements(
+                    By.TAG_NAME, 'td')
                 break
-            except:
+            except BaseException:
                 continue
 
         offensive_FV = getOffensiveFV(scouting_report)
@@ -170,16 +176,26 @@ async def top(ctx, *args):
             driver, 10).until(
             EC.presence_of_element_located(
                 (By.ID, 'dashboard')))
-        performance_metrics = performance_metrics.find_element(By.CLASS_NAME, 'table-scroll')
-        performance_metrics = performance_metrics.find_elements(By.CLASS_NAME, 'row-minors.is-selected__invalid')
+        performance_metrics = performance_metrics.find_element(
+            By.CLASS_NAME, 'table-scroll')
+        performance_metrics = performance_metrics.find_elements(
+            By.CLASS_NAME, 'row-minors.is-selected__invalid')
 
         performance_score = getPerformanceScore(performance_metrics, level_ref)
 
         top_list[j]['Perform'] = performance_score
-        top_list[j]['PDR'] = performance_score * offensive_FV / 10  # divide by 10 to make it a pretty number
+        top_list[j]['PDR'] = performance_score * offensive_FV / \
+            10  # divide by 10 to make it a pretty number
 
     scout_table = PrettyTable()
-    scout_table.field_names = ['#', 'rank', 'Player', 'position', 'FV', 'Perform', 'PDR']
+    scout_table.field_names = [
+        '#',
+        'rank',
+        'Player',
+        'position',
+        'FV',
+        'Perform',
+        'PDR']
 
     sortedL = sortListBy(top_list, 'PDR')
     print(sortedL)
@@ -203,7 +219,7 @@ async def top(ctx, *args):
                 print(pstats[f])
                 temprow.append('%.1f' % pstats[f])
         scout_table.add_row(temprow)
-        counter+=1
+        counter += 1
 
     leaders = '''2022 Top 100 PDR:\n%s''' % (scout_table)
 
@@ -215,7 +231,8 @@ async def top(ctx, *args):
 
 
 # add a 2022 argument
-@bot.command(name="scout", brief="prospect rating based on 2:1 performance to scouting ratio")
+@bot.command(name="scout",
+             brief="prospect rating based on 2:1 performance to scouting ratio")
 async def PDR(ctx, *args):
 
     await ctx.channel.send('Please wait...')
@@ -227,7 +244,7 @@ async def PDR(ctx, *args):
 
     milb_offense = {}
 
-    level_ref = {'A-': 1.0, 'A': 1.0, 'A+':1.0, 'AA': 1.4, 'AAA': 1.5}
+    level_ref = {'A-': 1.0, 'A': 1.0, 'A+': 1.0, 'AA': 1.4, 'AAA': 1.5}
 
     num_players = 0
     total_pdr = 0
@@ -247,13 +264,14 @@ async def PDR(ctx, *args):
                 EC.presence_of_element_located(
                     (By.CLASS_NAME, 'player-page-prospects-main')))
             scouting_report = scouting_report.find_elements(By.TAG_NAME, 'td')
-            position = driver.find_element(By.CLASS_NAME, 'player-info-box-pos').text
+            position = driver.find_element(
+                By.CLASS_NAME, 'player-info-box-pos').text
 
             if position == 'P':
                 continue
 
             offensive_FV = getOffensiveFV(scouting_report)
-            #print(offensive_FV)
+            # print(offensive_FV)
 
             milb_offense[i] = {}
             milb_offense[i]['FV'] = '%.1f' % offensive_FV
@@ -262,14 +280,19 @@ async def PDR(ctx, *args):
                 driver, 10).until(
                 EC.presence_of_element_located(
                     (By.ID, 'dashboard')))
-            performance_metrics = performance_metrics.find_element(By.CLASS_NAME, 'table-scroll')
-            performance_metrics = performance_metrics.find_elements(By.CLASS_NAME, 'row-minors.is-selected__invalid')
+            performance_metrics = performance_metrics.find_element(
+                By.CLASS_NAME, 'table-scroll')
+            performance_metrics = performance_metrics.find_elements(
+                By.CLASS_NAME, 'row-minors.is-selected__invalid')
 
-            performance_score = getPerformanceScore(performance_metrics, level_ref, year)
-            #print(performance_score)
+            performance_score = getPerformanceScore(
+                performance_metrics, level_ref, year)
+            # print(performance_score)
 
             milb_offense[i]['Perform'] = '%.1f' % performance_score
-            milb_offense[i]['PDR'] = '%.1f' % (performance_score * offensive_FV / 10)  # divide by 10 to make it a pretty number
+            # divide by 10 to make it a pretty number
+            milb_offense[i]['PDR'] = '%.1f' % (
+                performance_score * offensive_FV / 10)
             total_pdr += (performance_score * offensive_FV / 10)
             num_players += 1
 
@@ -294,7 +317,7 @@ async def PDR(ctx, *args):
     await ctx.send(leaders)
 
     print(milb_offense)
-    await ctx.send('Avg PDR: %s' % (total_pdr/num_players))
+    await ctx.send('Avg PDR: %s' % (total_pdr / num_players))
 
     # try:
     #     leaderboard[author]['PDR'] = '%.1f' % (total_pdr/num_players)
@@ -303,15 +326,16 @@ async def PDR(ctx, *args):
     #     leaderboard[author] = {'Team': author, 'WAR': 0, 'wRC+': 0, 'OPS': 0, 'FIP': 0, 'K9': 0, 'AvgAge': 0, 'PDR': pdr}
 
 
-#@bot.command(name="stats", brief='Team stats for the season.')
-#async def teamStats(ctx, *args):
-def teamStats(ctx, *args):
+@bot.command(name="stats", brief='Team stats for the season.')
+async def teamStats(ctx, *args):
+#def teamStats():
 
     League = openJSON('League.json')
     mlb_links = openJSON('MLB.json')
     leaders = openJSON('Leaderboard.json')
 
     author = str(ctx.message.author)
+    #author = str("The610___#0624")
 
     mlb_offense = {}
     mlb_defense = {}
@@ -337,6 +361,7 @@ def teamStats(ctx, *args):
 
     milb_hitting = {
         'AB': 0,
+        'PA': 0,
         'R': 0,
         'H': 0,
         'TB': 0,
@@ -352,6 +377,7 @@ def teamStats(ctx, *args):
         'OBP': 0.0,  # (H + BB + HBP) / (AB + BB + HBP + SF)
         'OPS': 0.0,  # OBP + SLG
         'SLG': 0.0,  # (1B + 2B*2 + 3B*3 + HR*4)/AB
+        'ISO': 0.0,  # SLG - OBP
 
         'HBP': 0,
         'SF': 0,
@@ -359,6 +385,7 @@ def teamStats(ctx, *args):
 
     mlb_hitting = {
         'AB': 0,
+        'PA': 0,
         'R': 0,
         'H': 0,
         'TB': 0,
@@ -374,6 +401,7 @@ def teamStats(ctx, *args):
         'OBP': 0.0,  # (H + BB + HBP) / (AB + BB + HBP + SF)
         'OPS': 0.0,  # OBP + SLG
         'SLG': 0.0,  # (1B + 2B*2 + 3B*3 + HR*4)/AB
+        'ISO': 0.0,  # SLG - OBP
 
         'HBP': 0,
         'SF': 0,
@@ -396,7 +424,8 @@ def teamStats(ctx, *args):
     }
 
     # Counters to calculate totals
-    avg_age, activeroster, war, wrc, m_wrc, fip, m_fip, hitters, pitchers, m_hitters, m_pitchers, owar, oage, moage, dwar, dage, mdage = 0
+    avg_age, activeroster, war, wrc, m_wrc, fip, m_fip, hitters, pitchers, m_hitters, m_pitchers, owar, oage, moage, dwar, dage, mdage = (0,) * 17
+    FIP_constant = 3.129  #https://www.fangraphs.com/guts.aspx?type=cn
 
     for player_name in League[author]:
         if League[author][player_name]['position'] == 'Prospect':
@@ -412,6 +441,7 @@ def teamStats(ctx, *args):
             player_age = pl.find_elements(
                 By.CLASS_NAME, 'player-info-box-item')[0].text
 
+            # Scrape information from the dashboard
             try:
                 dashboard = WebDriverWait(
                     driver, 10).until(
@@ -424,65 +454,64 @@ def teamStats(ctx, *args):
                 By.CLASS_NAME, 'table-scroll')
             tbody = table_scroll.find_element(By.TAG_NAME, 'tbody')
             try:
-                mlb_season = tbody.find_elements(By.CLASS_NAME, 'row-minors.is-selected__invalid')
+                minors_seasons_dashboard = tbody.find_elements(
+                    By.CLASS_NAME, 'row-minors.is-selected__invalid')
             except BaseException:
-                print(
-                    '%s is not in the Minors yet, but also not a declared prospect. Skipping' % player_name)
+                print('%s has not played in the minors yet, Skipping...' % player_name)
                 continue
 
+            # Grab all rows in the dashboard that are 2022 minor league rows of stats
             this_season = []
-            for k in mlb_season:
-                yr = k.find_elements(By.TAG_NAME, 'td')[0]
+            for stint in minors_seasons_dashboard:
+                yr = stint.find_elements(By.TAG_NAME, 'td')[0]
                 yr = yr.find_element(By.TAG_NAME, 'a').text
                 if yr == '2022':
-                    this_season.append(k)
-                    break
-            else:
-                print('2022 Season not found')
+                    this_season.append(stint)
+            if len(this_season) < 1:
+                print('2022 Season not found in dashboard')
                 continue
 
-            for season in this_season:
-                rows = season.find_elements(By.TAG_NAME, 'td')
-                tempwar = 0
-                tempwrc = 0
-                if rows[0].text == '2022':
-                    #tempwar = float(rows[27].text)
-                    try:
-                        tempwrc = float(rows[21].text)
-                    except BaseException:
-                        tempwrc = 0
-                        print('no wrc')
-                    try:
-                        tempfip = float(rows[23].text)
-                    except BaseException:
-                        tempfip = 0
-                        print('no fip')
+            # Scrape FIP and/or wRC+ from each of the 2022 rows in the dashboard
+            tempfip = 0
+            tempwar = 0
+            tempwrc = 0
+            tempIP = 0
+            tempPA = 0
+            for stint in this_season:
+                rows = stint.find_elements(By.TAG_NAME, 'td')
+                if player_position == 'P':
+                    tempfip += (float(rows[23].text) * int(round(float(rows[9].text)*1.333)))
+                    tempIP += int(round(float(rows[9].text)*1.333))
+                else:
+                    tempwrc += (float(rows[21].text) * int(rows[5].text))
+                    tempPA += int(rows[5].text)
 
+            # Now move onto the Standard table and scrape
             dashboard = WebDriverWait(
                 driver, 10).until(
                 EC.presence_of_element_located(
                     (By.ID, 'standard')))
             table_scroll = dashboard.find_element(
                 By.CLASS_NAME, 'table-scroll')
-            mlb_season = table_scroll.find_elements(
-                By.CLASS_NAME, 'row-minors')
+            minors_seasons_standard = table_scroll.find_elements(
+                By.CLASS_NAME, 'row-minors.is-selected__invalid')
 
             # problem area
-            thisseason = []
-            for j in mlb_season:
-                yr = j.find_elements(By.TAG_NAME, 'td')[0]
+            time.sleep(0.1)
+            this_season = []
+            for stint in minors_seasons_standard:
+                yr = stint.find_elements(By.TAG_NAME, 'td')[0]
                 yr = yr.find_element(By.TAG_NAME, 'a').text
                 if yr == '2022':
-                    thisseason.append(j)
-                    break
-            else:
-                print(i)
-                print('Player hasnt played in 2022 yet, skipping')
+                    this_season.append(stint)
+            if len(this_season) < 1:
+                print('%s hasnt played in 2022 yet, skipping' % player_name)
                 continue
 
-            if position == 'P':
-                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = 0
-                for s in thisseason:
+            if player_position == 'P':
+                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (0,) * 10
+                tempfip = tempfip / tempIP
+                for s in this_season:
                     cols = s.find_elements(By.TAG_NAME, 'td')
 
                     wins += int(cols[3].get_attribute('innerHTML'))
@@ -507,14 +536,14 @@ def teamStats(ctx, *args):
                 milb_pitching['H'] += hits
                 milb_pitching['BB'] += walks
                 milb_pitching['ER'] += earned_runs
-                m_fip += tempfip
+                m_fip += (tempfip*innings_pitched)
 
-                milb_defense[i] = {
-                    'Pos': position,
+                milb_defense[player_name] = {
+                    'Pos': player_position,
                     'Age': int(
-                        age.split(': ')[1]),
+                        player_age.split(': ')[1]),
                     'WAR': tempwar,
-                    'FIP': tempfip,
+                    'FIP': '%.2f' % tempfip,
                     'W': wins,
                     'L': losses,
                     'G': games,
@@ -529,27 +558,32 @@ def teamStats(ctx, *args):
                     'WHIP': '%.2f' % ((hits + walks) / innings_pitched),
                     'K9': '%.2f' % ((strikeouts * 9) / innings_pitched)}
 
-                    #dwar += tempwar
-                mdage += int(age.split(': ')[1])
+                #dwar += tempwar
+                mdage += int(player_age.split(': ')[1])
                 m_pitchers += 1
 
             else:
-                cols = thisseason.find_elements(By.TAG_NAME, 'td')
+                at_bats, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (0,) * 12
+                tempwrc = tempwrc / tempPA
+                for s in this_season:
+                    cols = s.find_elements(By.TAG_NAME, 'td')
 
-                at_bats = int(cols[4].get_attribute('innerHTML'))
-                hits = int(cols[6].get_attribute('innerHTML'))
-                doubles = int(cols[8].get_attribute('innerHTML'))
-                triples = int(cols[9].get_attribute('innerHTML'))
-                homeruns = int(cols[10].get_attribute('innerHTML'))
-                runs = int(cols[11].get_attribute('innerHTML'))
-                rbis = int(cols[12].get_attribute('innerHTML'))
-                walks = int(cols[13].get_attribute('innerHTML'))
-                strikeouts = int(cols[15].get_attribute('innerHTML'))
-                hit_by_pitch = int(cols[16].get_attribute('innerHTML'))
-                sac_fly = int(cols[17].get_attribute('innerHTML'))
-                stolen_base = int(cols[20].get_attribute('innerHTML'))
+                    at_bats += int(cols[4].get_attribute('innerHTML'))
+                    plate_appear += int(cols[5].get_attribute('innerHTML'))
+                    hits += int(cols[6].get_attribute('innerHTML'))
+                    doubles += int(cols[8].get_attribute('innerHTML'))
+                    triples += int(cols[9].get_attribute('innerHTML'))
+                    homeruns += int(cols[10].get_attribute('innerHTML'))
+                    runs += int(cols[11].get_attribute('innerHTML'))
+                    rbis += int(cols[12].get_attribute('innerHTML'))
+                    walks += int(cols[13].get_attribute('innerHTML'))
+                    strikeouts += int(cols[15].get_attribute('innerHTML'))
+                    hit_by_pitch += int(cols[16].get_attribute('innerHTML'))
+                    sac_fly += int(cols[17].get_attribute('innerHTML'))
+                    stolen_base += int(cols[20].get_attribute('innerHTML'))
 
                 milb_hitting['AB'] += at_bats
+                milb_hitting['PA'] += plate_appear
                 milb_hitting['H'] += hits
                 milb_hitting['doub'] += doubles
                 milb_hitting['trip'] += triples
@@ -561,21 +595,21 @@ def teamStats(ctx, *args):
                 milb_hitting['HBP'] += hit_by_pitch
                 milb_hitting['SF'] += sac_fly
                 milb_hitting['SB'] += stolen_base
-                m_wrc += tempwrc * at_bats
-                m_hitters += 1
+                m_wrc += (tempwrc*plate_appear)
 
                 obp = (hits + walks + hit_by_pitch) / \
                     (at_bats + walks + hit_by_pitch + sac_fly)
-                slg = ((hits - doubles - triples - homeruns) + doubles * 2 +
-                       triples * 3 + homeruns * 4) / at_bats  # (1B + 2B*2 + 3B*3 + HR*4)/AB
+                slg = ((hits - doubles - triples - homeruns) + doubles * 2 + \
+                       triples * 3 + homeruns * 4) / at_bats # (1B + 2B*2 + 3B*3 + HR*4)/AB
 
-                milb_offense[i] = {
-                    'Pos': position,
+                milb_offense[player_name] = {
+                    'Pos': player_position,
                     'Age': int(
-                        age.split(': ')[1]),
+                        player_age.split(': ')[1]),
                     'WAR': tempwar,
-                    'wRC+': tempwrc,
+                    'wRC+': '%d' % round(tempwrc),
                     'AB': at_bats,
+                    'PA': plate_appear,
                     'H': hits,
                     'doub': doubles,
                     'trip': triples,
@@ -590,87 +624,74 @@ def teamStats(ctx, *args):
                     'AVG': '%.3f' % (hits / at_bats),
                     'OBP': '%.3f' % obp,
                     'SLG': '%.3f' % slg,
+                    'ISO': '%.3f' % (slg-obp),
                     'OPS': '%.3f' % (obp + slg)}
 
                 #owar += tempwar
-                moage += int(age.split(': ')[1])
+                moage += int(player_age.split(': ')[1])
+                m_hitters += 1
 
-        elif League[author][i]['position'] == 'Injured List':
-            print('%s: Player Injured, Skipping...' % i)
+        elif League[author][player_name]['position'] == 'Injured List':
+            print('%s: Player Injured, Skipping...' % player_name)
             continue
+
         else:  # major leaguers
-            try:
-                url = stats[i]['link']
-                driver.get(url)
-            except BaseException:
-                try:
-                    del stats[i]
-                    print('link is old, refreshing...')
-                except BaseException:
-                    print('Adding New Player...')
-            if i not in stats:
-                url = 'https://www.google.com'
-                driver.get(url)
 
-                time.sleep(0.1)
-                name = 'fangraphs ' + i
-                print(name)
-                e = driver.find_element(By.NAME, 'q')
-                e.send_keys(name)
-                e.send_keys(Keys.ENTER)
-                time.sleep(0.1)
-                f = driver.find_elements(By.TAG_NAME, 'a')
-                for j in f:
-                    posslink = j.get_attribute('href')
-                    if posslink is None:
-                        continue
-                    href = "https://www.fangraphs.com/players/"
-                    if href == posslink[:34]:
-                        j.click()
-                        time.sleep(0.1)
-                        link = posslink  # save this in lookup table
-                        break
-                # navigates to baseball reference.
-                stats[i] = {'link': link}
-                # scrape
-                time.sleep(0.1)
+            mlb_links = updateURL(driver, mlb_links, player_name)
 
-                #pl = driver.find_element(By.CLASS_NAME, 'player-header--vitals')
             pl = WebDriverWait(
                 driver, 10).until(
                 EC.presence_of_element_located(
                     (By.CLASS_NAME, 'player-info-box-header')))
-            position = pl.find_element(
+            player_position = pl.find_element(
                 By.CLASS_NAME, 'player-info-box-pos').text
-            age = pl.find_elements(
+            player_age = pl.find_elements(
                 By.CLASS_NAME, 'player-info-box-item')[0].text
 
             try:
                 dashboard = WebDriverWait(
                     driver, 10).until(
                     EC.presence_of_element_located(
-                        (By.ID, 'dashboard-skinny')))
+                        (By.ID, 'dashboard')))
             except BaseException:
-                print(i)
-                print('Player is not in the MLB yet, Skipping')
+                print('%s is not in the League yet, Skipping' % player_name)
                 continue
             table_scroll = dashboard.find_element(
                 By.CLASS_NAME, 'table-scroll')
             tbody = table_scroll.find_element(By.TAG_NAME, 'tbody')
             try:
-                mlb_season = tbody.find_element(
+                mlb_seasons_dashboard = tbody.find_elements(
                     By.CLASS_NAME, 'row-mlb-season')
             except BaseException:
-                print(i)
-                print(
-                    'Player is not in the MLB yet, but also not a declared prospect. Skipping')
+                print('%s is not in the MLB yet, but also not a declared prospect. Skipping...' % player_name)
                 continue
-            rows = mlb_season.find_elements(By.TAG_NAME, 'td')
+
+            this_season = []
+            for stint in mlb_seasons_dashboard:
+                yr = stint.find_elements(By.TAG_NAME, 'td')[0]
+                yr = yr.find_element(By.TAG_NAME, 'a').text
+                if yr == '2022':
+                    this_season.append(stint)
+            if len(this_season) < 1:
+                print('%s 2022 Season not found in dashboard' % player_name)
+                continue
+
+            tempfip = 0
             tempwar = 0
             tempwrc = 0
-            if rows[0].text == '2022':
-                tempwar = float(rows[11].text)
-                tempwrc = float(rows[10].text)
+            tempIP = 0
+            tempPA = 0
+            for stint in this_season:
+                rows = stint.find_elements(By.TAG_NAME, 'td')
+                if player_position == 'P':
+                    tempfip += (float(rows[23].text) * int(round(float(rows[9].text)*1.333)))
+                    tempIP += int(round(float(rows[9].text)*1.333))
+                    tempwar += float(rows[25].text)
+                else:
+                    tempwrc += (float(rows[21].text) * int(rows[5].text))
+                    tempPA += int(rows[5].text)
+                    tempwar += float(rows[27].text)
+
 
             dashboard = WebDriverWait(
                 driver, 10).until(
@@ -678,35 +699,38 @@ def teamStats(ctx, *args):
                     (By.ID, 'standard')))
             table_scroll = dashboard.find_element(
                 By.CLASS_NAME, 'table-scroll')
-            mlb_season = table_scroll.find_elements(
+            mlb_seasons_standard = table_scroll.find_elements(
                 By.CLASS_NAME, 'row-mlb-season')
 
             # problem area
-            for j in mlb_season:
-                yr = j.find_elements(By.TAG_NAME, 'td')[0]
+            time.sleep(0.1)
+            this_season = []
+            for stint in mlb_seasons_standard:
+                yr = stint.find_elements(By.TAG_NAME, 'td')[0]
                 yr = yr.find_element(By.TAG_NAME, 'a').text
                 if yr == '2022':
-                    thisseason = j
-                    break
-            else:
-                print(i)
-                print('Player hasnt played in 2022 yet, skipping')
+                    this_season.append(stint)
+            if len(this_season) < 1:
+                print('%s hasnt played in 2022 yet, skipping' % player_name)
                 continue
 
-            if position == 'P':
-                cols = thisseason.find_elements(By.TAG_NAME, 'td')
+            if player_position == 'P':
+                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (0,) * 10
+                tempfip = tempfip / tempIP
+                for s in this_season:
+                    cols = s.find_elements(By.TAG_NAME, 'td')
 
-                wins = int(cols[3].get_attribute('innerHTML'))
-                losses = int(cols[4].get_attribute('innerHTML'))
-                games = int(cols[6].get_attribute('innerHTML'))
-                games_started = int(cols[7].get_attribute('innerHTML'))
-                saves = int(cols[10].get_attribute('innerHTML'))
-                innings_pitched = (int(cols[13].get_attribute('innerHTML').split(
-                    '.')[0]) + int(cols[13].get_attribute('innerHTML').split('.')[1]) * 0.333)
-                strikeouts = int(cols[24].get_attribute('innerHTML'))
-                hits = int(cols[15].get_attribute('innerHTML'))
-                walks = int(cols[19].get_attribute('innerHTML'))
-                earned_runs = int(cols[17].get_attribute('innerHTML'))
+                    wins += int(cols[3].get_attribute('innerHTML'))
+                    losses += int(cols[4].get_attribute('innerHTML'))
+                    games += int(cols[6].get_attribute('innerHTML'))
+                    games_started += int(cols[7].get_attribute('innerHTML'))
+                    saves += int(cols[10].get_attribute('innerHTML'))
+                    innings_pitched += (int(cols[13].get_attribute('innerHTML').split(
+                        '.')[0]) + int(cols[13].get_attribute('innerHTML').split('.')[1]) * 0.333)
+                    strikeouts += int(cols[24].get_attribute('innerHTML'))
+                    hits += int(cols[15].get_attribute('innerHTML'))
+                    walks += int(cols[19].get_attribute('innerHTML'))
+                    earned_runs += int(cols[17].get_attribute('innerHTML'))
 
                 mlb_pitching['W'] += wins
                 mlb_pitching['L'] += losses
@@ -718,15 +742,14 @@ def teamStats(ctx, *args):
                 mlb_pitching['H'] += hits
                 mlb_pitching['BB'] += walks
                 mlb_pitching['ER'] += earned_runs
-                fip += tempwrc
-                pitchers += 1
+                fip += (tempfip*innings_pitched)
 
-                mlb_defense[i] = {
-                    'Pos': position,
+                mlb_defense[player_name] = {
+                    'Pos': player_position,
                     'Age': int(
-                        age.split(': ')[1]),
+                        player_age.split(': ')[1]),
                     'WAR': tempwar,
-                    'FIP': tempwrc,
+                    'FIP': '%.2f' % tempfip,
                     'W': wins,
                     'L': losses,
                     'G': games,
@@ -742,25 +765,30 @@ def teamStats(ctx, *args):
                     'K9': '%.2f' % ((strikeouts * 9) / innings_pitched)}
 
                 dwar += tempwar
-                dage += int(age.split(': ')[1])
-
+                dage += int(player_age.split(': ')[1])
+                pitchers += 1
             else:
-                cols = thisseason.find_elements(By.TAG_NAME, 'td')
+                at_bats, plate_appear, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (0,) * 13
+                tempwrc = tempwrc / tempPA
+                for s in this_season:
+                    cols = s.find_elements(By.TAG_NAME, 'td')
 
-                at_bats = int(cols[4].get_attribute('innerHTML'))
-                hits = int(cols[6].get_attribute('innerHTML'))
-                doubles = int(cols[8].get_attribute('innerHTML'))
-                triples = int(cols[9].get_attribute('innerHTML'))
-                homeruns = int(cols[10].get_attribute('innerHTML'))
-                runs = int(cols[11].get_attribute('innerHTML'))
-                rbis = int(cols[12].get_attribute('innerHTML'))
-                walks = int(cols[13].get_attribute('innerHTML'))
-                strikeouts = int(cols[15].get_attribute('innerHTML'))
-                hit_by_pitch = int(cols[16].get_attribute('innerHTML'))
-                sac_fly = int(cols[17].get_attribute('innerHTML'))
-                stolen_base = int(cols[20].get_attribute('innerHTML'))
+                    at_bats += int(cols[4].get_attribute('innerHTML'))
+                    plate_appear += int(cols[5].get_attribute('innerHTML'))
+                    hits += int(cols[6].get_attribute('innerHTML'))
+                    doubles += int(cols[8].get_attribute('innerHTML'))
+                    triples += int(cols[9].get_attribute('innerHTML'))
+                    homeruns += int(cols[10].get_attribute('innerHTML'))
+                    runs += int(cols[11].get_attribute('innerHTML'))
+                    rbis += int(cols[12].get_attribute('innerHTML'))
+                    walks += int(cols[13].get_attribute('innerHTML'))
+                    strikeouts += int(cols[15].get_attribute('innerHTML'))
+                    hit_by_pitch += int(cols[16].get_attribute('innerHTML'))
+                    sac_fly += int(cols[17].get_attribute('innerHTML'))
+                    stolen_base += int(cols[20].get_attribute('innerHTML'))
 
                 mlb_hitting['AB'] += at_bats
+                mlb_hitting['PA'] += plate_appear
                 mlb_hitting['H'] += hits
                 mlb_hitting['doub'] += doubles
                 mlb_hitting['trip'] += triples
@@ -772,21 +800,21 @@ def teamStats(ctx, *args):
                 mlb_hitting['HBP'] += hit_by_pitch
                 mlb_hitting['SF'] += sac_fly
                 mlb_hitting['SB'] += stolen_base
-                wrc += tempwrc * at_bats
-                hitters += 1
+                wrc += (tempwrc*plate_appear)
 
                 obp = (hits + walks + hit_by_pitch) / \
-                    (at_bats + walks + hit_by_pitch + sac_fly)
-                slg = ((hits - doubles - triples - homeruns) + doubles * 2 +
-                       triples * 3 + homeruns * 4) / at_bats  # (1B + 2B*2 + 3B*3 + HR*4)/AB
+                      (at_bats + walks + hit_by_pitch + sac_fly)
+                slg = ((hits - doubles - triples - homeruns) + doubles * 2 + \
+                       triples * 3 + homeruns * 4) / at_bats # (1B + 2B*2 + 3B*3 + HR*4)/AB
 
-                mlb_offense[i] = {
-                    'Pos': position,
+                mlb_offense[player_name] = {
+                    'Pos': player_position,
                     'Age': int(
-                        age.split(': ')[1]),
+                        player_age.split(': ')[1]),
                     'WAR': tempwar,
-                    'wRC+': tempwrc,
+                    'wRC+': '%d' % round(tempwrc),
                     'AB': at_bats,
+                    'PA': plate_appear,
                     'H': hits,
                     'doub': doubles,
                     'trip': triples,
@@ -801,14 +829,14 @@ def teamStats(ctx, *args):
                     'AVG': '%.3f' % (hits / at_bats),
                     'OBP': '%.3f' % obp,
                     'SLG': '%.3f' % slg,
+                    'ISO': '%.3f' % (slg-obp),
                     'OPS': '%.3f' % (obp + slg)}
 
                 owar += tempwar
-                oage += int(age.split(': ')[1])
+                oage += int(player_age.split(': ')[1])
+                hitters += 1
 
-            stats[i]['position'] = position
-            stats[i]['age'] = age
-            avg_age += int(age.split(': ')[1])
+            avg_age += int(player_age.split(': ')[1])
             activeroster += 1
             war += tempwar
 
@@ -821,9 +849,11 @@ def teamStats(ctx, *args):
         slg = '%.3f' % (
             (singles + 2 * milb_hitting['doub'] + 3 * milb_hitting['trip'] + 4 * milb_hitting['HR']) / milb_hitting['AB'])
         ops = '%.3f' % (float(obp) + float(slg))
+        iso = '%.3f' % (float(slg) - float(obp))
         milb_hitting['AVG'] = avg
         milb_hitting['OBP'] = obp
         milb_hitting['SLG'] = slg
+        milb_hitting['ISO'] = iso
         milb_hitting['OPS'] = ops
         print(milb_hitting)
         x = PrettyTable()
@@ -843,11 +873,12 @@ def teamStats(ctx, *args):
             'AVG',
             'OBP',
             'SLG',
+            'ISO',
             'OPS']
         milb_hitting['Pos'] = 'Team'
         milb_hitting['Age'] = '%.1f' % (moage / m_hitters)
         milb_hitting['WAR'] = 0
-        milb_hitting['wRC+'] = int(m_wrc / int(milb_hitting['AB']))
+        milb_hitting['wRC+'] = int(m_wrc / int(milb_hitting['PA']))
         milb_offense['TEAM'] = milb_hitting
         for j in milb_offense:
             temprow = []
@@ -856,7 +887,6 @@ def teamStats(ctx, *args):
                     temprow.append(j)
                 else:
                     temprow.append(milb_offense[j][i])
-            print(temprow)
             x.add_row(temprow)
         mi_hitters = '''MiLB Hitting Team Stats:\n%s\n''' % (x)
     except Exception as e:
@@ -871,7 +901,6 @@ def teamStats(ctx, *args):
             (milb_pitching['H'] + milb_pitching['BB']) / milb_pitching['IP'])
         milb_pitching['K9'] = '%.3f' % (
             (9 * milb_pitching['SO']) / milb_pitching['IP'])
-        print(milb_pitching)
         y = PrettyTable()
         y.field_names = [
             'Player',
@@ -893,7 +922,8 @@ def teamStats(ctx, *args):
         milb_pitching['Pos'] = 'Team'
         milb_pitching['Age'] = '%.1f' % (mdage / m_pitchers)
         milb_pitching['WAR'] = 0
-        milb_pitching['FIP'] = '%.2f' % (m_fip / m_pitchers)
+        milb_pitching['FIP'] = '%.2f' % (m_fip / milb_pitching['IP'])
+        print(milb_pitching)
         milb_defense['TEAM'] = milb_pitching
         for k in milb_defense:
             temprow = []
@@ -918,14 +948,15 @@ def teamStats(ctx, *args):
         mlb_hitting['AB'] + mlb_hitting['BB'] + mlb_hitting['HBP'] + mlb_hitting['SF']))
     singles = mlb_hitting['H'] - mlb_hitting['doub'] - \
         mlb_hitting['trip'] - mlb_hitting['HR']
-    slg = '%.3f' % ((singles + 2 * mlb_hitting['doub'] + 3 * \
+    slg = '%.3f' % ((singles + 2 * mlb_hitting['doub'] + 3 *
                     mlb_hitting['trip'] + 4 * mlb_hitting['HR']) / mlb_hitting['AB'])
     ops = '%.3f' % (float(obp) + float(slg))
+    iso = '%.3f' % (float(slg) - float(obp))
     mlb_hitting['AVG'] = avg
     mlb_hitting['OBP'] = obp
     mlb_hitting['SLG'] = slg
+    mlb_hitting['ISO'] = iso
     mlb_hitting['OPS'] = ops
-    print(mlb_hitting)
     x = PrettyTable()
     x.field_names = [
         'Player',
@@ -943,11 +974,13 @@ def teamStats(ctx, *args):
         'AVG',
         'OBP',
         'SLG',
+        'ISO',
         'OPS']
     mlb_hitting['Pos'] = 'Team'
     mlb_hitting['Age'] = '%.1f' % (oage / hitters)
     mlb_hitting['WAR'] = '%.1f' % owar
-    mlb_hitting['wRC+'] = int(wrc / int(mlb_hitting['AB']))
+    mlb_hitting['wRC+'] = int(wrc / int(mlb_hitting['PA']))
+    print(mlb_hitting)
     mlb_offense['TEAM'] = mlb_hitting
     for j in mlb_offense:
         temprow = []
@@ -966,7 +999,6 @@ def teamStats(ctx, *args):
         (mlb_pitching['H'] + mlb_pitching['BB']) / mlb_pitching['IP'])
     mlb_pitching['K9'] = '%.3f' % (
         (9 * mlb_pitching['SO']) / mlb_pitching['IP'])
-    print(mlb_pitching)
     y = PrettyTable()
     y.field_names = [
         'Player',
@@ -988,7 +1020,8 @@ def teamStats(ctx, *args):
     mlb_pitching['Pos'] = 'Team'
     mlb_pitching['Age'] = '%.1f' % (dage / pitchers)
     mlb_pitching['WAR'] = '%.1f' % dwar
-    mlb_pitching['FIP'] = '%.2f' % (fip / pitchers)
+    mlb_pitching['FIP'] = '%.2f' % (fip / mlb_pitching['IP'])
+    print(mlb_pitching)
     mlb_defense['TEAM'] = mlb_pitching
     for k in mlb_defense:
         temprow = []
@@ -1018,27 +1051,27 @@ def teamStats(ctx, *args):
              mi_pitchers))
     inf.close()
 
-    #if download:
-    #    with open('stats_history/%s_stats_%s.txt' % (author, today), "rb") as file:
-    #        await ctx.channel.send("%s Team Stats: " % author, file=discord.File(file, ("%s_stats.txt" % author)))
-    #else:
-    #    renderStatsImage((str_hitters + str_pitchers + mi_hitters + mi_pitchers))
-    #    await ctx.channel.send("%s Team Stats: " % author, file=discord.File(r'test.png'))
+    if download:
+       with open('stats_history/%s_stats_%s.txt' % (author, today), "rb") as file:
+           await ctx.channel.send("%s Team Stats: " % author, file=discord.File(file, ("%s_stats.txt" % author)))
+    else:
+        renderStatsImage((str_hitters + str_pitchers + mi_hitters + mi_pitchers))
+    await ctx.channel.send("%s Team Stats: " % author,
+        file=discord.File(r'test.png'))
 
     print(milb_defense)
 
     leaders[author] = {}
     leaders[author]['AvgAge'] = '%.2f' % (avg_age / activeroster)
     leaders[author]['WAR'] = '%.1f' % war
-    leaders[author]['wRC+'] = '%d' % int(wrc / int(mlb_hitting['AB']))
+    leaders[author]['wRC+'] = mlb_hitting['wRC+']
     leaders[author]['OPS'] = mlb_hitting['OPS']
-    leaders[author]['ISO'] = mlb_hitting['SLG'] - mlb_hitting['AVG']
+    leaders[author]['ISO'] = mlb_hitting['ISO']
     leaders[author]['K9'] = mlb_pitching['K9']
-    leaders[author]['FIP'] = '%.2f' % (fip / pitchers)
+    leaders[author]['FIP'] = mlb_pitching['FIP']
 
     writeJSON('Leaderboard.json', leaders)
-    writeJSON('MLB.json', stats)
-    writeJSON('MiLB.json', milb_stats)
+    writeJSON('MLB.json', mlb_links)
 
 
 @bot.command(name="leaderboard",
@@ -1048,7 +1081,15 @@ async def leaderboard(ctx, *args):
     leaderboard = openJSON('Leaderboard.json')
 
     l = PrettyTable()
-    l.field_names = ['Team', 'WAR', 'wRC+', 'OPS', 'ISO', 'FIP', 'K9', 'AvgAge']
+    l.field_names = [
+        'Team',
+        'WAR',
+        'wRC+',
+        'OPS',
+        'ISO',
+        'FIP',
+        'K9',
+        'AvgAge']
 
     sortColumn = 'WAR'
 
@@ -1069,7 +1110,8 @@ async def leaderboard(ctx, *args):
 
 
 @bot.command(name="refresh", brief="Scrapes ESPN for any new roster changes.")
-# This one is messy, dont bother tweaking the time.sleep, its just the way she goes
+# This one is messy, dont bother tweaking the time.sleep, its just the way
+# she goes
 async def refreshLeague(ctx):
 
     League = openJSON('League.json')
@@ -1077,8 +1119,8 @@ async def refreshLeague(ctx):
     delinquents = []
     await ctx.channel.send('Refreshing, please dont run any commands...')
     for z in League:
-        url = 'https://fantasy.espn.com/baseball/team?leagueId='+str(usermap['leagueID'])+'&teamId=' + \
-            str(usermap[str(z)])
+        url = 'https://fantasy.espn.com/baseball/team?leagueId=' + \
+            str(LEAGUEID) + '&teamId=' + str(USERMAP[str(z)])
         driver.get(url)
         # dashboard = WebDriverWait(
         #     driver, 10).until(
@@ -1322,4 +1364,5 @@ async def on_ready():
 
 
 if __name__ == '__main__':
+    #teamStats()
     bot.run(DISCORD_TOKEN)

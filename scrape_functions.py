@@ -6,7 +6,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs', HREF="https://www.fangraphs.com/players/"):
+
+def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs',
+              HREF="https://www.fangraphs.com/players/"):
     try:
         url = playerDict[playerName]['link']
         driver.get(url)
@@ -17,6 +19,7 @@ def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs', HREF="https://
         except BaseException:
             print('Adding New Player...')
     if playerName not in playerDict:
+        time.sleep(0.2)
         url = 'https://www.google.com'
         driver.get(url)
 
@@ -44,6 +47,7 @@ def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs', HREF="https://
 
     return playerDict
 
+
 def getOffensiveFV(scouting_report):
     hit_rating = scouting_report[0].text.split(' / ')
     hit_rating = (int(hit_rating[0]) + int(hit_rating[1])) / 2
@@ -60,12 +64,13 @@ def getOffensiveFV(scouting_report):
     offensive_FV = (hit_rating + game_power + raw_power + speed_rating) / 4
     return offensive_FV
 
+
 def getPerformanceScore(performance_metrics, level_ref, year):
 
     total_pa = 0
     numerator = 0
     for b in performance_metrics:
-        #print(b.get_attribute('innerHTML'))
+        # print(b.get_attribute('innerHTML'))
         statistics = b.find_elements(By.TAG_NAME, 'td')
         if year != 'All':
             season = statistics[0].find_element(By.TAG_NAME, 'a')
@@ -86,7 +91,7 @@ def getPerformanceScore(performance_metrics, level_ref, year):
         numerator += ((level * plate_appearances * wrcplus) / age)
     try:
         performance_score = numerator / total_pa
-    except:
+    except BaseException:
         performance_score = 0
 
     return performance_score

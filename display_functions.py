@@ -1,6 +1,7 @@
 from prettytable import PrettyTable
 from PIL import Image, ImageDraw, ImageFont
 
+
 def sortListBy(stat_list, sort_column):
     sortedL = []
 
@@ -16,6 +17,7 @@ def sortListBy(stat_list, sort_column):
             sortedL.append((d, float(stat_list[d][sort_column])))
 
     return sortedL
+
 
 def renderStatsImage(text_data):
 
@@ -41,6 +43,7 @@ def renderStatsImage(text_data):
 
     img.save('test.png')
     return
+
 
 def createPrettyTable(sorted_list, pretty_table_obj, stat_dict):
 
