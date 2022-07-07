@@ -110,124 +110,124 @@ async def myroster(ctx):
     await ctx.channel.send(embed=embed)
 
 
-@bot.command(name="top100", brief="Top 100 prospects list.")
-async def top(ctx, *args):
-
-    top_list = openJSON('top100.json')
-    #top_list = openJSON('2020top100.json')
-
-    level_ref = {'A-': 1.0, 'A': 1.0, 'A+': 1.0, 'AA': 1.4, 'AAA': 1.5}
-
-    url = 'https://blogs.fangraphs.com/2022-top-100-prospects/'
-    #url = 'https://blogs.fangraphs.com/2020-top-100-prospects/'
-    driver.get(url)
-
-    fangraphs_list = WebDriverWait(
-        driver, 10).until(
-        EC.presence_of_element_located(
-            (By.CLASS_NAME, 'table-container.table-green')))
-    fangraphs_list = fangraphs_list.find_element(By.TAG_NAME, 'tbody')
-    fangraphs_list = fangraphs_list.find_elements(By.TAG_NAME, 'tr')
-
-    for i in fangraphs_list:
-
-        columns = i.find_elements(By.TAG_NAME, 'td')
-        if len(columns) <= 0:
-            print('divider')
-            continue
-        # print(columns[1].get_attribute('innerHTML'))
-        rank = columns[0].text
-        try:
-            link = columns[1].find_element(By.TAG_NAME, 'a')
-        except BaseException:
-            continue
-        name = link.text
-        link = link.get_attribute('href')
-        position = columns[5].text
-
-        if 'P' in position:
-            print('pitcher')
-            continue
-
-        top_list[name] = {'rank': rank, 'position': position, 'link': link}
-
-    for j in top_list:
-        url = top_list[j]['link']
-        while True:
-            try:
-                driver.get(url)
-
-                scouting_report = WebDriverWait(
-                    driver, 10).until(
-                    EC.presence_of_element_located(
-                        (By.CLASS_NAME, 'player-page-prospects-main')))
-                scouting_report = scouting_report.find_elements(
-                    By.TAG_NAME, 'td')
-                break
-            except BaseException:
-                continue
-
-        offensive_FV = getOffensiveFV(scouting_report)
-
-        top_list[j]['FV'] = offensive_FV
-        offensive_FV = top_list[j]['FV']
-
-        performance_metrics = WebDriverWait(
-            driver, 10).until(
-            EC.presence_of_element_located(
-                (By.ID, 'dashboard')))
-        performance_metrics = performance_metrics.find_element(
-            By.CLASS_NAME, 'table-scroll')
-        performance_metrics = performance_metrics.find_elements(
-            By.CLASS_NAME, 'row-minors.is-selected__invalid')
-
-        performance_score = getPerformanceScore(performance_metrics, level_ref)
-
-        top_list[j]['Perform'] = performance_score
-        top_list[j]['PDR'] = performance_score * offensive_FV / \
-            10  # divide by 10 to make it a pretty number
-
-    scout_table = PrettyTable()
-    scout_table.field_names = [
-        '#',
-        'rank',
-        'Player',
-        'position',
-        'FV',
-        'Perform',
-        'PDR']
-
-    sortedL = sortListBy(top_list, 'PDR')
-    print(sortedL)
-
-    counter = 1
-    for d in sortedL:
-        pname = d[0]
-        pstats = top_list[pname]
-        temprow = []
-        #print((pname, pstats))
-        for f in scout_table.field_names:
-            if f == 'Player':
-                temprow.append(pname)
-            elif f == 'rank':
-                temprow.append('%s' % pstats[f])
-            elif f == 'position':
-                temprow.append('%s' % pstats[f])
-            elif f == '#':
-                temprow.append('%d' % counter)
-            else:
-                print(pstats[f])
-                temprow.append('%.1f' % pstats[f])
-        scout_table.add_row(temprow)
-        counter += 1
-
-    leaders = '''2022 Top 100 PDR:\n%s''' % (scout_table)
-
-    renderStatsImage(leaders)  # data is saved in test.png
-
-    await ctx.channel.send(file=discord.File(r'test.png'))
-
-    writeJSON('top100.json', top_list)
+# @bot.command(name="top100", brief="Top 100 prospects list.")
+# async def top(ctx, *args):
+#
+#     top_list = openJSON('top100.json')
+#     #top_list = openJSON('2020top100.json')
+#
+#     level_ref = {'A-': 1.0, 'A': 1.0, 'A+': 1.0, 'AA': 1.4, 'AAA': 1.5}
+#
+#     url = 'https://blogs.fangraphs.com/2022-top-100-prospects/'
+#     #url = 'https://blogs.fangraphs.com/2020-top-100-prospects/'
+#     driver.get(url)
+#
+#     fangraphs_list = WebDriverWait(
+#         driver, 10).until(
+#         EC.presence_of_element_located(
+#             (By.CLASS_NAME, 'table-container.table-green')))
+#     fangraphs_list = fangraphs_list.find_element(By.TAG_NAME, 'tbody')
+#     fangraphs_list = fangraphs_list.find_elements(By.TAG_NAME, 'tr')
+#
+#     for i in fangraphs_list:
+#
+#         columns = i.find_elements(By.TAG_NAME, 'td')
+#         if len(columns) <= 0:
+#             print('divider')
+#             continue
+#         # print(columns[1].get_attribute('innerHTML'))
+#         rank = columns[0].text
+#         try:
+#             link = columns[1].find_element(By.TAG_NAME, 'a')
+#         except BaseException:
+#             continue
+#         name = link.text
+#         link = link.get_attribute('href')
+#         position = columns[5].text
+#
+#         if 'P' in position:
+#             print('pitcher')
+#             continue
+#
+#         top_list[name] = {'rank': rank, 'position': position, 'link': link}
+#
+#     for j in top_list:
+#         url = top_list[j]['link']
+#         while True:
+#             try:
+#                 driver.get(url)
+#
+#                 scouting_report = WebDriverWait(
+#                     driver, 10).until(
+#                     EC.presence_of_element_located(
+#                         (By.CLASS_NAME, 'player-page-prospects-main')))
+#                 scouting_report = scouting_report.find_elements(
+#                     By.TAG_NAME, 'td')
+#                 break
+#             except BaseException:
+#                 continue
+#
+#         offensive_FV = getOffensiveFV(scouting_report)
+#
+#         top_list[j]['FV'] = offensive_FV
+#         offensive_FV = top_list[j]['FV']
+#
+#         performance_metrics = WebDriverWait(
+#             driver, 10).until(
+#             EC.presence_of_element_located(
+#                 (By.ID, 'dashboard')))
+#         performance_metrics = performance_metrics.find_element(
+#             By.CLASS_NAME, 'table-scroll')
+#         performance_metrics = performance_metrics.find_elements(
+#             By.CLASS_NAME, 'row-minors.is-selected__invalid')
+#
+#         performance_score = getPerformanceScore(performance_metrics, level_ref)
+#
+#         top_list[j]['Perform'] = performance_score
+#         top_list[j]['PDR'] = performance_score * offensive_FV / \
+#             10  # divide by 10 to make it a pretty number
+#
+#     scout_table = PrettyTable()
+#     scout_table.field_names = [
+#         '#',
+#         'rank',
+#         'Player',
+#         'position',
+#         'FV',
+#         'Perform',
+#         'PDR']
+#
+#     sortedL = sortListBy(top_list, 'PDR')
+#     print(sortedL)
+#
+#     counter = 1
+#     for d in sortedL:
+#         pname = d[0]
+#         pstats = top_list[pname]
+#         temprow = []
+#         #print((pname, pstats))
+#         for f in scout_table.field_names:
+#             if f == 'Player':
+#                 temprow.append(pname)
+#             elif f == 'rank':
+#                 temprow.append('%s' % pstats[f])
+#             elif f == 'position':
+#                 temprow.append('%s' % pstats[f])
+#             elif f == '#':
+#                 temprow.append('%d' % counter)
+#             else:
+#                 print(pstats[f])
+#                 temprow.append('%.1f' % pstats[f])
+#         scout_table.add_row(temprow)
+#         counter += 1
+#
+#     leaders = '''2022 Top 100 PDR:\n%s''' % (scout_table)
+#
+#     renderStatsImage(leaders)  # data is saved in test.png
+#
+#     await ctx.channel.send(file=discord.File(r'test.png'))
+#
+#     writeJSON('top100.json', top_list)
 
 
 # add a 2022 argument
@@ -257,7 +257,12 @@ async def PDR(ctx, *args):
 
     for i in League[author]:
         if League[author][i]['position'] == 'Prospect':
-            milb_stats = updateURL(driver, milb_stats, i)
+            milb_stats = updateURL(
+                driver,
+                milb_stats,
+                i,
+                League[author][i]['position'],
+                League[author][i]['team'])
 
             scouting_report = WebDriverWait(
                 driver, 10).until(
@@ -266,6 +271,8 @@ async def PDR(ctx, *args):
             scouting_report = scouting_report.find_elements(By.TAG_NAME, 'td')
             position = driver.find_element(
                 By.CLASS_NAME, 'player-info-box-pos').text
+
+            time.sleep(0.2)
 
             if position == 'P':
                 continue
@@ -328,14 +335,14 @@ async def PDR(ctx, *args):
 
 @bot.command(name="stats", brief='Team stats for the season.')
 async def teamStats(ctx, *args):
-#def teamStats():
+    # def teamStats():
 
     League = openJSON('League.json')
     mlb_links = openJSON('MLB.json')
     leaders = openJSON('Leaderboard.json')
 
     author = str(ctx.message.author)
-    #author = str("The610___#0624")
+    # author = str("The610___#0624")
 
     mlb_offense = {}
     mlb_defense = {}
@@ -424,13 +431,19 @@ async def teamStats(ctx, *args):
     }
 
     # Counters to calculate totals
-    avg_age, activeroster, war, wrc, m_wrc, fip, m_fip, hitters, pitchers, m_hitters, m_pitchers, owar, oage, moage, dwar, dage, mdage = (0,) * 17
-    FIP_constant = 3.129  #https://www.fangraphs.com/guts.aspx?type=cn
+    avg_age, activeroster, war, wrc, m_wrc, fip, m_fip, hitters, pitchers, m_hitters, m_pitchers, owar, oage, moage, dwar, dage, mdage = (
+        0,) * 17
+    FIP_constant = 3.129  # https://www.fangraphs.com/guts.aspx?type=cn
 
     for player_name in League[author]:
         if League[author][player_name]['position'] == 'Prospect':
 
-            mlb_links = updateURL(driver, mlb_links, player_name)
+            mlb_links = updateURL(
+                driver,
+                mlb_links,
+                player_name,
+                League[author][player_name]['position'],
+                League[author][player_name]['team'])
 
             pl = WebDriverWait(
                 driver, 10).until(
@@ -457,10 +470,13 @@ async def teamStats(ctx, *args):
                 minors_seasons_dashboard = tbody.find_elements(
                     By.CLASS_NAME, 'row-minors.is-selected__invalid')
             except BaseException:
-                print('%s has not played in the minors yet, Skipping...' % player_name)
+                print(
+                    '%s has not played in the minors yet, Skipping...' %
+                    player_name)
                 continue
 
-            # Grab all rows in the dashboard that are 2022 minor league rows of stats
+            # Grab all rows in the dashboard that are 2022 minor league rows of
+            # stats
             this_season = []
             for stint in minors_seasons_dashboard:
                 yr = stint.find_elements(By.TAG_NAME, 'td')[0]
@@ -471,7 +487,8 @@ async def teamStats(ctx, *args):
                 print('2022 Season not found in dashboard')
                 continue
 
-            # Scrape FIP and/or wRC+ from each of the 2022 rows in the dashboard
+            # Scrape FIP and/or wRC+ from each of the 2022 rows in the
+            # dashboard
             tempfip = 0
             tempwar = 0
             tempwrc = 0
@@ -480,8 +497,9 @@ async def teamStats(ctx, *args):
             for stint in this_season:
                 rows = stint.find_elements(By.TAG_NAME, 'td')
                 if player_position == 'P':
-                    tempfip += (float(rows[23].text) * int(round(float(rows[9].text)*1.333)))
-                    tempIP += int(round(float(rows[9].text)*1.333))
+                    tempfip += (float(rows[23].text) *
+                                int(round(float(rows[9].text) * 1.333)))
+                    tempIP += int(round(float(rows[9].text) * 1.333))
                 else:
                     tempwrc += (float(rows[21].text) * int(rows[5].text))
                     tempPA += int(rows[5].text)
@@ -509,7 +527,8 @@ async def teamStats(ctx, *args):
                 continue
 
             if player_position == 'P':
-                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (0,) * 10
+                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (
+                    0,) * 10
                 tempfip = tempfip / tempIP
                 for s in this_season:
                     cols = s.find_elements(By.TAG_NAME, 'td')
@@ -536,7 +555,7 @@ async def teamStats(ctx, *args):
                 milb_pitching['H'] += hits
                 milb_pitching['BB'] += walks
                 milb_pitching['ER'] += earned_runs
-                m_fip += (tempfip*innings_pitched)
+                m_fip += (tempfip * innings_pitched)
 
                 milb_defense[player_name] = {
                     'Pos': player_position,
@@ -563,7 +582,8 @@ async def teamStats(ctx, *args):
                 m_pitchers += 1
 
             else:
-                at_bats, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (0,) * 12
+                at_bats, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (
+                    0,) * 12
                 tempwrc = tempwrc / tempPA
                 for s in this_season:
                     cols = s.find_elements(By.TAG_NAME, 'td')
@@ -595,7 +615,7 @@ async def teamStats(ctx, *args):
                 milb_hitting['HBP'] += hit_by_pitch
                 milb_hitting['SF'] += sac_fly
                 milb_hitting['SB'] += stolen_base
-                m_wrc += (tempwrc*plate_appear)
+                m_wrc += (tempwrc * plate_appear)
 
                 obp = (hits + walks + hit_by_pitch) / \
                     (at_bats + walks + hit_by_pitch + sac_fly)
@@ -624,7 +644,7 @@ async def teamStats(ctx, *args):
                     'AVG': '%.3f' % (hits / at_bats),
                     'OBP': '%.3f' % obp,
                     'SLG': '%.3f' % slg,
-                    'ISO': '%.3f' % (slg-obp),
+                    'ISO': '%.3f' % (slg - obp),
                     'OPS': '%.3f' % (obp + slg)}
 
                 #owar += tempwar
@@ -637,7 +657,12 @@ async def teamStats(ctx, *args):
 
         else:  # major leaguers
 
-            mlb_links = updateURL(driver, mlb_links, player_name)
+            mlb_links = updateURL(
+                driver,
+                mlb_links,
+                player_name,
+                League[author][player_name]['position'],
+                League[author][player_name]['team'])
 
             pl = WebDriverWait(
                 driver, 10).until(
@@ -663,7 +688,9 @@ async def teamStats(ctx, *args):
                 mlb_seasons_dashboard = tbody.find_elements(
                     By.CLASS_NAME, 'row-mlb-season')
             except BaseException:
-                print('%s is not in the MLB yet, but also not a declared prospect. Skipping...' % player_name)
+                print(
+                    '%s is not in the MLB yet, but also not a declared prospect. Skipping...' %
+                    player_name)
                 continue
 
             this_season = []
@@ -684,14 +711,14 @@ async def teamStats(ctx, *args):
             for stint in this_season:
                 rows = stint.find_elements(By.TAG_NAME, 'td')
                 if player_position == 'P':
-                    tempfip += (float(rows[23].text) * int(round(float(rows[9].text)*1.333)))
-                    tempIP += int(round(float(rows[9].text)*1.333))
+                    tempfip += (float(rows[23].text) *
+                                int(round(float(rows[9].text) * 1.333)))
+                    tempIP += int(round(float(rows[9].text) * 1.333))
                     tempwar += float(rows[25].text)
                 else:
                     tempwrc += (float(rows[21].text) * int(rows[5].text))
                     tempPA += int(rows[5].text)
                     tempwar += float(rows[27].text)
-
 
             dashboard = WebDriverWait(
                 driver, 10).until(
@@ -715,7 +742,8 @@ async def teamStats(ctx, *args):
                 continue
 
             if player_position == 'P':
-                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (0,) * 10
+                wins, losses, games, games_started, saves, innings_pitched, strikeouts, hits, walks, earned_runs = (
+                    0,) * 10
                 tempfip = tempfip / tempIP
                 for s in this_season:
                     cols = s.find_elements(By.TAG_NAME, 'td')
@@ -742,7 +770,7 @@ async def teamStats(ctx, *args):
                 mlb_pitching['H'] += hits
                 mlb_pitching['BB'] += walks
                 mlb_pitching['ER'] += earned_runs
-                fip += (tempfip*innings_pitched)
+                fip += (tempfip * innings_pitched)
 
                 mlb_defense[player_name] = {
                     'Pos': player_position,
@@ -768,7 +796,8 @@ async def teamStats(ctx, *args):
                 dage += int(player_age.split(': ')[1])
                 pitchers += 1
             else:
-                at_bats, plate_appear, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (0,) * 13
+                at_bats, plate_appear, hits, doubles, triples, homeruns, runs, rbis, walks, strikeouts, hit_by_pitch, sac_fly, stolen_base = (
+                    0,) * 13
                 tempwrc = tempwrc / tempPA
                 for s in this_season:
                     cols = s.find_elements(By.TAG_NAME, 'td')
@@ -800,7 +829,7 @@ async def teamStats(ctx, *args):
                 mlb_hitting['HBP'] += hit_by_pitch
                 mlb_hitting['SF'] += sac_fly
                 mlb_hitting['SB'] += stolen_base
-                wrc += (tempwrc*plate_appear)
+                wrc += (tempwrc * plate_appear)
 
                 obp = (hits + walks + hit_by_pitch) / \
                       (at_bats + walks + hit_by_pitch + sac_fly)
@@ -829,7 +858,7 @@ async def teamStats(ctx, *args):
                     'AVG': '%.3f' % (hits / at_bats),
                     'OBP': '%.3f' % obp,
                     'SLG': '%.3f' % slg,
-                    'ISO': '%.3f' % (slg-obp),
+                    'ISO': '%.3f' % (slg - obp),
                     'OPS': '%.3f' % (obp + slg)}
 
                 owar += tempwar
@@ -1052,12 +1081,13 @@ async def teamStats(ctx, *args):
     inf.close()
 
     if download:
-       with open('stats_history/%s_stats_%s.txt' % (author, today), "rb") as file:
-           await ctx.channel.send("%s Team Stats: " % author, file=discord.File(file, ("%s_stats.txt" % author)))
+        with open('stats_history/%s_stats_%s.txt' % (author, today), "rb") as file:
+            await ctx.channel.send("%s Team Stats: " % author, file=discord.File(file, ("%s_stats.txt" % author)))
     else:
-        renderStatsImage((str_hitters + str_pitchers + mi_hitters + mi_pitchers))
+        renderStatsImage(
+            (str_hitters + str_pitchers + mi_hitters + mi_pitchers))
     await ctx.channel.send("%s Team Stats: " % author,
-        file=discord.File(r'test.png'))
+                           file=discord.File(r'test.png'))
 
     print(milb_defense)
 
@@ -1231,6 +1261,146 @@ async def refreshLeague(ctx):
     await ctx.channel.send('All Rosters Updated, Thanks!')
 
 
+@bot.command(name="statcast", brief="Grabs Baseball Savant player page")
+async def baseballSavant(ctx, *args):
+
+    search_query = 'Baseball Savant '
+    for i in args:
+        search_query += i + ' '
+    search_query = search_query.strip()
+
+    HREF = "https://baseballsavant.mlb.com/savant-player/"
+    url = 'https://www.google.com'
+    link = ''
+    driver.get(url)
+
+    time.sleep(0.3)
+    e = driver.find_element(By.NAME, 'q')
+    e.send_keys(search_query)
+    e.send_keys(Keys.ENTER)
+    time.sleep(0.3)
+    f = driver.find_elements(By.TAG_NAME, 'a')
+    for j in f:
+        posslink = j.get_attribute('href')
+        if posslink is None:
+            continue
+        href = HREF
+        if href == posslink[:len(href)]:
+            j.click()
+            time.sleep(0.1)
+            link = posslink  # save this in lookup table
+            break
+
+    WebDriverWait(
+        driver, 30).until(
+        EC.presence_of_element_located(
+            (By.ID, 'percentile-rankings')))
+
+    try:
+        avg_exit_velo = driver.find_element(
+            By.ID, 'text_percent_rank_exit_velocity_avg').text
+    except BaseException:
+        avg_exit_velo = ''
+    try:
+        hard_hit_percent = driver.find_element(
+            By.ID, 'text_percent_rank_hard_hit_percent').text
+    except BaseException:
+        hard_hit_percent = ''
+    try:
+        xwoba = driver.find_element(By.ID, 'text_percent_rank_xwoba').text
+    except BaseException:
+        xwoba = ''
+    try:
+        xba = driver.find_element(By.ID, 'text_percent_rank_xba').text
+    except BaseException:
+        xba = ''
+    try:
+        xslg = driver.find_element(By.ID, 'text_percent_rank_xslg').text
+    except BaseException:
+        xslg = ''
+    try:
+        percent_barrel_rate = driver.find_element(
+            By.ID, 'text_percent_rank_barrel_batted_rate').text
+    except BaseException:
+        percent_barrel_rate = ''
+    try:
+        percent_k_rate = driver.find_element(
+            By.ID, 'text_percent_rank_k_percent').text
+    except BaseException:
+        percent_k_rate = ''
+    try:
+        percent_bb_rate = driver.find_element(
+            By.ID, 'text_percent_rank_bb_percent').text
+    except BaseException:
+        percent_bb_rate = ''
+    try:
+        percent_whiff_rate = driver.find_element(
+            By.ID, 'text_percent_rank_whiff_percent').text
+    except BaseException:
+        percent_whiff_rate = ''
+    try:
+        percent_chase_rate = driver.find_element(
+            By.ID, 'text_percent_rank_chase_percent').text
+    except BaseException:
+        percent_chase_rate = ''
+    try:
+        max_exit_velo = driver.find_element(
+            By.ID, 'text_percent_rank_exit_velocity_max').text
+    except BaseException:
+        max_exit_velo = ''
+    try:
+        xera = driver.find_element(By.ID, 'text_percent_rank_xera').text
+    except BaseException:
+        xera = ''
+    try:
+        sprint_speed = driver.find_element(
+            By.ID, 'text_percent_speed_order').text
+    except BaseException:
+        sprint_speed = ''
+    try:
+        fastball_velo = driver.find_element(
+            By.ID, 'text_percent_rank_fastball_velo').text
+    except BaseException:
+        fastball_velo = ''
+
+    rank_dict = {
+        'Avg Exit Velocity': avg_exit_velo,
+        'Max Exit Velocity': max_exit_velo,
+        'HardHit%': hard_hit_percent,
+        'xwOBA': xwoba,
+        'xERA': xera,
+        'xBA': xba,
+        'xSLG': xslg,
+        'Barrel%': percent_barrel_rate,
+        'K%': percent_k_rate,
+        'BB%': percent_bb_rate,
+        'Whiff%': percent_whiff_rate,
+        'Chase Rate': percent_chase_rate,
+        'Sprint Speed': sprint_speed,
+        'Fastball Velocity': fastball_velo}
+
+    embed = discord.Embed(
+        title='>>> Click Here: %s <<<' % search_query,
+        url=link,
+        # description="blah",
+        color=discord.Color.blue()
+    )
+
+    for i in rank_dict:
+        if len(rank_dict[i]) > 0:
+            percentile = int(rank_dict[i])
+            display_color = ''
+            if percentile >= 70:
+                display_color = "```diff\n-[%d]\n```" % percentile
+            elif percentile <= 30:
+                display_color = "```ini\n[%d]\n```" % percentile
+            else:
+                display_color = "```[%d]```" % percentile
+            embed.add_field(name=i, value=display_color, inline=True)
+
+    await ctx.channel.send(embed=embed)
+
+
 @bot.command(name="declare",
              brief="Adds a player to your 8 man prospect pool.")
 async def declareProspect(ctx, *, args=None):
@@ -1247,7 +1417,12 @@ async def declareProspect(ctx, *, args=None):
         if player_name.lower() == input_player.lower():
             await ctx.channel.send('Adding player...')
 
-            mlb_links = updateURL(driver, mlb_links, player_name)
+            mlb_links = updateURL(
+                driver,
+                mlb_links,
+                player_name,
+                League[author][player_name]['position'],
+                League[author][player_name]['team'])
             level = checkLevel(driver)
 
             if level == "MLB":
@@ -1364,5 +1539,5 @@ async def on_ready():
 
 
 if __name__ == '__main__':
-    #teamStats()
+    # teamStats()
     bot.run(DISCORD_TOKEN)
