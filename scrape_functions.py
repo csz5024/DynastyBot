@@ -7,29 +7,25 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 
-def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs',
+def updateURL(driver, playerDict, playerName, playerPos, playerTeam, SOURCE='Fangraphs',
               HREF="https://www.fangraphs.com/players/"):
+
     try:
+        time.sleep(0.3)
         url = playerDict[playerName]['link']
         driver.get(url)
-    except BaseException:
-        try:
-            del playerDict[playerName]
-            print('link is old, refreshing...')
-        except BaseException:
-            print('Adding New Player...')
-    if playerName not in playerDict:
-        time.sleep(0.2)
+    except:
+        time.sleep(0.3)
         url = 'https://www.google.com'
         driver.get(url)
+        time.sleep(0.1)
 
-        time.sleep(0.2)
-        name = SOURCE + ' ' + playerName
+        name = SOURCE + ' ' + playerName + ' ' + playerPos + ' ' + playerTeam
         print(name)
         e = driver.find_element(By.NAME, 'q')
         e.send_keys(name)
         e.send_keys(Keys.ENTER)
-        time.sleep(0.2)
+        time.sleep(0.3)
         f = driver.find_elements(By.TAG_NAME, 'a')
         for j in f:
             posslink = j.get_attribute('href')
@@ -38,12 +34,10 @@ def updateURL(driver, playerDict, playerName, SOURCE='Fangraphs',
             href = HREF
             if href == posslink[:len(href)]:
                 j.click()
-                time.sleep(0.1)
+                time.sleep(0.3)
                 link = posslink  # save this in lookup table
                 break
         playerDict[playerName] = {'link': link}
-        # scrape
-        time.sleep(0.1)
 
     return playerDict
 
